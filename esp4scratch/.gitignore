@@ -1,3 +1,14 @@
 .pioenvs
 .clang_complete
 .gcc-flags.json
+/platformio.ini
+/lib/
+/core/
+/Release/
+/.travis.yml
+/.metadata/
+/.settings/
+/libraries/
+/.cproject
+/.ino.cpp
+/.project
