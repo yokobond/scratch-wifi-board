@@ -12,6 +12,9 @@
 
 void setup() {
     Serial.begin(BAUD);
+    if (!SPIFFS.begin()) {
+        Serial.println("Failed to mount file system");
+    }
     setupWiFiConf();
     setupWeb();
     setupCommandPort();
@@ -81,7 +84,7 @@ void setupScratchWeb(void) {
         content += "<p>";
         content += "</p><form method='get' action='set_scratch_conf'><label>Scratch Configuration: </label>";
         content += "<input type='checkbox' name='scratch_multicast' value='1' id= 'multicast'";
-        if (ScratchConf.multicast) {
+        if (scratch_multicast) {
             content += " checked='checked'";
         }
         content += "><label for='multicast'>Multicast Module-IP</label> ";
@@ -94,17 +97,17 @@ void setupScratchWeb(void) {
     server.on("/set_scratch_conf", []() {
         if (server.arg("scratch_multicast").equals(String("1"))) {
             DEBUG_E4S("Set scratch_multicast to true\n");
-            ScratchConf.multicast = true;
+            scratch_multicast = true;
         } else {
             DEBUG_E4S("Set scratch_multicast to false\n");
-            ScratchConf.multicast = false;
+            scratch_multicast = false;
         }
-        saveScratchConf(SCRATCH_CONFIG_START);
+        saveScratchConfig();
         String content;
         content = "<!DOCTYPE HTML>\r\n<html>";
         content += "<p>Saved to EEPROM </p>";
         content += "<p>Multicast Module-IP: ";
-        if (ScratchConf.multicast) {
+        if (scratch_multicast) {
             content += "true";
         } else {
             content += "false";
@@ -306,7 +309,7 @@ void loop() {
     }
 
     if (cycleCheck(&scratch_last_update, scratch_update_cycle)) {
-        if (ScratchConf.multicast) {
+        if (scratch_multicast) {
             IPAddress ip = WiFi.localIP();
             String ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
             char message[32] = {0};

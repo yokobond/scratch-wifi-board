@@ -8,6 +8,8 @@
 
 #include <ESP8266WiFi.h>
 #include <EEPROM.h>
+#include <ArduinoJson.h>
+#include "FS.h"
 
 //#define DEBUG_E4S(...) Serial.printf( __VA_ARGS__ )
 
@@ -15,54 +17,52 @@
 #define DEBUG_E4S(...)
 #endif
 
-#define SCRATCH_CONF_FORMAT {0, 0, 0, 1}
-
-const uint8_t scratch_conf_format[] = SCRATCH_CONF_FORMAT;
-
 struct ScratchClient {
     IPAddress ip;
     WiFiClient* wifi;
     unsigned long last_connected;
 };
 
-struct ScratchConfStruct {
-    uint8_t format[4];
-    bool multicast;
-} ScratchConf = {
-    SCRATCH_CONF_FORMAT,
-    true,
-};
+boolean scratch_multicast = false;
+#define SCRATCH_CONFIG_FILE_NAME "/scratch.json"
 
-
-bool loadScratchConf(int start) {
-    DEBUG_E4S("\nloading ScratchConf\n");
-    if (EEPROM.read(start + 0) == scratch_conf_format[0] &&
-        EEPROM.read(start + 1) == scratch_conf_format[1] &&
-        EEPROM.read(start + 2) == scratch_conf_format[2] &&
-        EEPROM.read(start + 3) == scratch_conf_format[3])
-    {
-        for (unsigned int t = 0; t < sizeof(ScratchConf); t++) {
-            *((char*)&ScratchConf + t) = EEPROM.read(start + t);
-        }
-        DEBUG_E4S("ScratchConf.multicast = %s\n", (ScratchConf.multicast ? "true" : "false"));
-        return true;
-    } else {
-        DEBUG_E4S("ScratchConf was not saved on EEPROM.\n");
-        return false;
+bool loadScratchConfig() {
+    DEBUG_E4S("\nloading ScratchConfig\n");
+    File configFile = SPIFFS.open(SCRATCH_CONFIG_FILE_NAME, "r");
+    if (!configFile) {
+      Serial.println("Failed to open config file");
+      return false;
     }
+    size_t size = configFile.size();
+    if (size > 1024) {
+      Serial.println("Config file size is too large");
+      return false;
+    }
+    std::unique_ptr<char[]> buf(new char[size]);
+    configFile.readBytes(buf.get(), size);
+    StaticJsonBuffer<200> jsonBuffer;
+    JsonObject& json = jsonBuffer.parseObject(buf.get());
+    if (!json.success()) {
+      Serial.println("Failed to parse config file");
+      return false;
+    }
+    scratch_multicast = json["multicast"];
+    DEBUG_E4S("Scratch multicast = %s\n", (scratch_multicast ? "true" : "false"));
+    return true;
 }
 
-void saveScratchConf(int start) {
-    DEBUG_E4S("\nwriting Scratch Config\n");
-    for (unsigned int t = 0; t < sizeof(ScratchConf); t++) {
-        EEPROM.write(start + t, *((char*)&ScratchConf + t));
-    }
-    EEPROM.commit();
-    DEBUG_E4S("ScratchConf.multicast = %s\n", (ScratchConf.multicast ? "true" : "false"));
+bool saveScratchConfig() {
+  StaticJsonBuffer<200> jsonBuffer;
+  JsonObject& json = jsonBuffer.createObject();
+  json["multicast"] = scratch_multicast;
+  File configFile = SPIFFS.open(SCRATCH_CONFIG_FILE_NAME, "w");
+  if (!configFile) {
+    Serial.println("Failed to open config file for writing");
+    return false;
+  }
+  json.printTo(configFile);
+  return true;
 }
-
-
-#define SCRATCH_CONFIG_START (WIFI_CONF_START + sizeof(WiFiConfStruct))  // next of WifiConfigStruct
 
 #define SCRATCH_CLIENT_SIZE 128
 ScratchClient scratch_clients[SCRATCH_CLIENT_SIZE];
@@ -79,9 +79,9 @@ void setupScratch(void) {
     multi_ip_sta[1] = WiFi.localIP()[1];
     multi_ip_sta[2] = WiFi.localIP()[2];
     // read eeprom for ScratchConf
-    if (!loadScratchConf(SCRATCH_CONFIG_START)) {
+    if (!loadScratchConfig()) {
         // EEPROM was not initialized.
-        saveScratchConf(SCRATCH_CONFIG_START);
+        saveScratchConfig();
     }
 
     // initialize scratch_clients
