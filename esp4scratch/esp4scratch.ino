@@ -243,8 +243,11 @@ void receivedCallback(char* message_data, int message_size) {
 }
 
 void setupCommandPort(void) {
-    COMMAND_PORT.begin(9600);
+    if (!COMMAND_PORT) {
+        COMMAND_PORT.begin(9600);
+    }
     command_buffer.reserve(256);
+    COMMAND_PORT.println();
     COMMAND_PORT.println("ready:esp4scratch");
     attachMessageReceivedP2P(receivedCallback);
 }
