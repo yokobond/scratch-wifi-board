@@ -1,3 +1,7 @@
+
+#ifndef __ESP_4_SCRATCH_H__
+#define __ESP_4_SCRATCH_H__
+
 #if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h"  // for digitalRead, digitalWrite, etc
 #else
@@ -115,4 +119,6 @@ void handleCommand(void) {
   command_end = false;
 }
 
+
+#endif
 
