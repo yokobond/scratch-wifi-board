@@ -67,6 +67,7 @@ void setupWeb(void) {
         content += "<li><a href='/module_id'>Setup Module ID</a>";
         content += "<li><a href='/update'>Update Sketch</a>";
         content += "</ul>";
+        content += "v.0.0.2";
         content += "</body></html>";
         server.send(200, "text/html", content);
     });
@@ -237,10 +238,11 @@ void setupScratchWeb(void) {
 
 #define COMMAND_PORT Serial
 String command_buffer;         // a string to hold incoming data
-boolean command_end = false;  // whether the string is complete
+String lastCommand;
 
 void receivedCallback(char* message_data, int message_size) {
-    DEBUG_E4S("callback:[%d]%s\n", message_size, message_data);
+    DEBUG_E4S(String("callback:[") + message_size + "] " + message_data);
+    COMMAND_PORT.println(message_data);
 }
 
 void setupCommandPort(void) {
@@ -248,6 +250,7 @@ void setupCommandPort(void) {
         COMMAND_PORT.begin(9600);
     }
     command_buffer.reserve(256);
+    lastCommand.reserve(256);
     COMMAND_PORT.println();
     COMMAND_PORT.println("ready:esp4scratch");
     attachMessageReceivedP2P(receivedCallback);
@@ -265,12 +268,13 @@ boolean cycleCheck(unsigned long *lastMillis, unsigned int cycle)
     }
 }
 
+
 void readCommand(void) {
     while (COMMAND_PORT.available()) {
         char in_char = (char)COMMAND_PORT.read();
         if (in_char == '\n') {
-            command_end = true;
-            break;
+            lastCommand = command_buffer;
+            command_buffer = "";
         } else {
             command_buffer += in_char;
         }
@@ -287,29 +291,28 @@ void loop() {
     readScratchMessageP2P();
 
     readCommand();
-    if (command_end) {
-        command_buffer.trim();
-        if (command_buffer.startsWith("multicast:", 0)) {
-            uint16_t message_size = command_buffer.length() - 10;
+    if (lastCommand.length() > 0) {
+        lastCommand.trim();
+        if (lastCommand.startsWith("multicast:", 0)) {
+            uint16_t message_size = lastCommand.length() - 10;
             char message_data[message_size];
-            command_buffer.substring(10).toCharArray(message_data, message_size + 1);
+            lastCommand.substring(10).toCharArray(message_data, message_size + 1);
             digitalWrite(LED, HIGH);
             sendScratchMessageMulticast(message_data, message_size);
             digitalWrite(LED, LOW);
-        } else if (command_buffer.startsWith("send:", 0)) {
-            uint32_t message_size = command_buffer.length() - 5;
+        } else if (lastCommand.startsWith("send:", 0)) {
+            uint32_t message_size = lastCommand.length() - 5;
             char message_data[message_size];
-            command_buffer.substring(5).toCharArray(message_data, message_size + 1);
+            lastCommand.substring(5).toCharArray(message_data, message_size + 1);
             digitalWrite(LED, HIGH);
             sendScratchMessageP2P(message_data, message_size);
             digitalWrite(LED, LOW);
-        } else if (command_buffer.startsWith("module_id?", 0)) {
+        } else if (lastCommand.startsWith("module_id?", 0)) {
             COMMAND_PORT.printf("module_id=%s\n", WiFiConf.module_id);
         } else {
-            COMMAND_PORT.printf("ERROR=%s\n", command_buffer.c_str());
+            COMMAND_PORT.printf("ERROR=%s\n", lastCommand.c_str());
         }
-        command_buffer = "";
-        command_end = false;
+        lastCommand = "";
     }
 
     if (cycleCheck(&scratch_last_update, scratch_update_cycle)) {

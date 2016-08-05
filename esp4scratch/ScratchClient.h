@@ -13,9 +13,10 @@
 
 //#define DEBUG
 //#define DEBUG_E4S(...) Serial.printf( __VA_ARGS__ )
+//#define DEBUG_E4S(x) Serial.print(x)
 
 #ifndef DEBUG_E4S
-#define DEBUG_E4S(...)
+#define DEBUG_E4S(x)
 #endif
 
 struct ScratchClient {
@@ -48,7 +49,7 @@ bool loadScratchConfig() {
       return false;
     }
     scratch_multicast = json["multicast"];
-    DEBUG_E4S("Scratch multicast = %s\n", (scratch_multicast ? "true" : "false"));
+    DEBUG_E4S(String("Scratch multicast = ") + String((scratch_multicast ? "true" : "false")));
     return true;
 }
 
@@ -110,8 +111,12 @@ bool loadScratchClients() {
     int i = 0;
     for (JsonArray::iterator it = array.begin(); it != array.end(); ++it) {
         JsonArray& ipJson = *it;
-        DEBUG_E4S("\nLoad scratch_client[%d] %d.%d.%d.%d\n", i, ipJson[0].as<int>(),
-                ipJson[1].as<int>(), ipJson[2].as<int>(), ipJson[3].as<int>());
+        DEBUG_E4S(String("\nLoad scratch_client")
+                + String("[") + String(i, DEC) + String("]")
+                + String(ipJson[0].as<int>(), DEC) + String(".")
+                + String(ipJson[1].as<int>(), DEC) + String(".")
+                + String(ipJson[2].as<int>(), DEC) + String(".")
+                + String(ipJson[3].as<int>(), DEC));
         IPAddress ip(ipJson[0].as<int>(), ipJson[1].as<int>(), ipJson[2].as<int>(), ipJson[3].as<int>());
         scratch_clients[i].ip = ip;
         i++;
@@ -155,9 +160,9 @@ void setupScratch(void) {
         saveScratchConfig();
     }
     if (0 == UdpSta.beginMulticast(WiFi.localIP(), multi_ip_sta, scratch_port)) { // return 0 for success?
-        DEBUG_E4S("\nUDP begin for multicasting on: %i\n", scratch_port);
+        DEBUG_E4S(String("\nUDP begin for multicasting on: ") + scratch_port);
     } else {
-        DEBUG_E4S("\nFail to begin UDP on: %i\n", scratch_port);
+        DEBUG_E4S(String("\nFail to begin UDP on: \n") + scratch_port);
     }
     loadScratchClients();
 }
@@ -167,9 +172,9 @@ int receiveScratchMessageUDP(byte* buff) {
     int readSize = UdpSta.parsePacket();
     if ( readSize ) {
         UdpSta.read(buff, readSize); // read the packet into the buffer
-        DEBUG_E4S("\n%d:Packet of %d received", millis() / 1000, readSize);
-        DEBUG_E4S(" from %d.%d.%d.%d\n", UdpSta.remoteIP()[0], UdpSta.remoteIP()[1], UdpSta.remoteIP()[2], UdpSta.remoteIP()[3]);
-        DEBUG_E4S("%s\n", buff);
+//        DEBUG_E4S(String("\n") + millis() / 1000 + ":Packet of " + readSize + " received");
+//        DEBUG_E4S(" from %d.%d.%d.%d\n", UdpSta.remoteIP()[0], UdpSta.remoteIP()[1], UdpSta.remoteIP()[2], UdpSta.remoteIP()[3]);
+//        DEBUG_E4S("%s\n", buff);
     }
     // TODO: process the message
     return readSize;
@@ -178,7 +183,7 @@ int receiveScratchMessageUDP(byte* buff) {
 void sendScratchMessageMulticast(char* message_data, uint16_t message_size) {
     UdpSta.beginPacketMulticast(multi_ip_sta, scratch_port, WiFi.localIP());
     if (0 != message_size) {
-        DEBUG_E4S("UDP:[%d]%s\n", message_size, message_data);
+        DEBUG_E4S(String("UDP:[") + message_size + "] " + message_data);
         if (UdpSta.write((const uint8_t*)message_data, message_size)) {
         } else {
             DEBUG_E4S("send err\n");
@@ -195,18 +200,17 @@ ScratchClient* registerScratch(IPAddress client_ip) {
     DEBUG_E4S("register_scratch_client\n");
     for (int i = 0; i < SCRATCH_CLIENT_SIZE; i++) {
         if (scratch_clients[i].ip == client_ip) {
-            DEBUG_E4S("connection already exists [%d] %d.%d.%d.%d\n",
-                      i,
-                      scratch_clients[i].ip[0], scratch_clients[i].ip[1], scratch_clients[i].ip[2], scratch_clients[i].ip[3]);
+            DEBUG_E4S(String("connection already exists [") + i + "] "
+                    + scratch_clients[i].ip[0] + "." + scratch_clients[i].ip[1] + "." + scratch_clients[i].ip[2] + "." + scratch_clients[i].ip[3]);
             return &scratch_clients[i];
         }
     }
     DEBUG_E4S("find space for new WiFiClient\n");
     for (int i = 0; i < SCRATCH_CLIENT_SIZE; i++) {
         if (scratch_clients[i].ip == IPAddress(0U)) {
-            DEBUG_E4S("found empty at scratch_clients[%d]\n", i);
+            DEBUG_E4S(String("found empty at scratch_clients[") + i + "]");
             scratch_clients[i].ip = client_ip;
-            DEBUG_E4S("new connection %d.%d.%d.%d\n", scratch_clients[i].ip[0], scratch_clients[i].ip[1], scratch_clients[i].ip[2], scratch_clients[i].ip[3]);
+//            DEBUG_E4S("new connection %d.%d.%d.%d\n", scratch_clients[i].ip[0], scratch_clients[i].ip[1], scratch_clients[i].ip[2], scratch_clients[i].ip[3]);
             saveScratchClients();
             return &scratch_clients[i];
         }
@@ -239,16 +243,15 @@ void sendScratchMessageP2P(char* message_data, uint32_t message_size) {
         if ((scratch_clients[i].ip != IPAddress(0U)) && wifi) {
             if (!wifi->connected()) {
                 if (wifi->connect(scratch_clients[i].ip, scratch_port)) {
-                    DEBUG_E4S("Scratch connected: %d.%d.%d.%d\n", scratch_clients[i].ip[0], scratch_clients[i].ip[1], scratch_clients[i].ip[2], scratch_clients[i].ip[3]);
+                    DEBUG_E4S(String("Scratch connected: ") + scratch_clients[i].ip[0] + "." + scratch_clients[i].ip[1] + "." + scratch_clients[i].ip[2] + "." + scratch_clients[i].ip[3]);
                 } else {
-                    //DEBUG_E4S("fail to connect: %d.%d.%d.%d\n", scratch_clients[i].ip[0], scratch_clients[i].ip[1], scratch_clients[i].ip[2], scratch_clients[i].ip[3]);
+//                    DEBUG_E4S(String("fail to connect: ") + scratch_clients[i].ip[0] + "." + scratch_clients[i].ip[1] + "." + scratch_clients[i].ip[2] + "." + scratch_clients[i].ip[3]);
                     continue;
                 }
             }
             wifi->write((const uint8_t*)size_data, 4);
             wifi->write((const uint8_t*)message_data, message_size);
             scratch_clients[i].last_connected = millis();
-            DEBUG_E4S("TCP:[%i]%s\n", message_size, message_data);
         }
     }
 }
@@ -269,9 +272,9 @@ void readScratchMessageP2P(void) {
         if ((scratch_clients[i].ip != IPAddress(0U)) && wifi) {
             if (!wifi->connected()) {
                 if (wifi->connect(scratch_clients[i].ip, scratch_port)) {
-                    DEBUG_E4S("Scratch connected: %d.%d.%d.%d\n", scratch_clients[i].ip[0], scratch_clients[i].ip[1], scratch_clients[i].ip[2], scratch_clients[i].ip[3]);
+//                    DEBUG_E4S(String("Scratch connected: ") + scratch_clients[i].ip[0] + "." + scratch_clients[i].ip[1] + "." + scratch_clients[i].ip[2] + "." + scratch_clients[i].ip[3]);
                 } else {
-                    //DEBUG_E4S("fail to connect: %d.%d.%d.%d\n", scratch_clients[i].ip[0], scratch_clients[i].ip[1], scratch_clients[i].ip[2], scratch_clients[i].ip[3]);
+//                    DEBUG_E4S(String("fail connected: ") + scratch_clients[i].ip[0] + "." + scratch_clients[i].ip[1] + "." + scratch_clients[i].ip[2] + "." + scratch_clients[i].ip[3]);
                     continue;
                 }
             }
@@ -287,6 +290,8 @@ void readScratchMessageP2P(void) {
             message_size |= (uint32_t) size_data[3];
             char message_data[256];
             wifi->readBytes(message_data, message_size);
+            message_data[message_size] = '\n';
+//            DEBUG_E4S(String("Received[") + message_size + "]:" + message_data);
             dispatchSensorUpdateReceivedP2P(message_data, message_size);
             scratch_clients[i].last_connected = millis();
         }
