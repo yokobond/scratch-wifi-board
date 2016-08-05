@@ -34,7 +34,7 @@ SoftwareSerial debugPort(10, 11); // RX, TX
 #define BAUD 9600
 
 String command_buffer;         // a string to hold incoming data
-bool command_end = false;  // whether the string is complete
+String lastCommand;
 
 int ledPin = 13;
 
@@ -44,19 +44,21 @@ void setupConnection(void) {
   DEBUG_PRINT("DEBUG: Started!");
 #endif
   command_buffer.reserve(256);
+  lastCommand.reserve(256);
   COMMAND_PORT.begin(BAUD);
   delay(5000);  // wait for setup the communication module
   while (!COMMAND_PORT);
   pinMode(3, OUTPUT);
 }
 
+
 void readCommand(void) {
   while (COMMAND_PORT.available()) {
     char in_char = (char)COMMAND_PORT.read();
     if (in_char == '\n') {
       command_buffer += '\0';
-      command_end = true;
-      break;
+      lastCommand = command_buffer;
+      command_buffer = "";
     } else {
       command_buffer += in_char;
     }
@@ -73,14 +75,14 @@ int  pmwValue(float value) {
 
 void handleCommand(void) {
   readCommand();
-  if (!command_end) {
+  if (lastCommand.length() < 16) {
     return;
   }
-  command_buffer.trim();
-  if (command_buffer.startsWith("sensor-update ", 0)) {
+  lastCommand.trim();
+  if (lastCommand.startsWith("sensor-update ", 0)) {
     String data;
     data.reserve(256);
-    data = command_buffer.substring(14);
+    data = lastCommand.substring(14);
     DEBUG_PRINT();
     DEBUG_PRINT(String("DEBUG:received:") + data);
     int readIndex = 0;
@@ -132,8 +134,7 @@ void handleCommand(void) {
   } else {
     // ignore it
   }
-  command_buffer = "";
-  command_end = false;
+  lastCommand = "";
 }
 
 
