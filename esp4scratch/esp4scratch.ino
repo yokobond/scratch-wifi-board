@@ -67,6 +67,7 @@ void setupWeb(void) {
         content += "<li><a href='/module_id'>Setup Module ID</a>";
         content += "<li><a href='/update'>Update Sketch</a>";
         content += "</ul>";
+        content += "v.0.0.2";
         content += "</body></html>";
         server.send(200, "text/html", content);
     });
@@ -240,7 +241,8 @@ String command_buffer;         // a string to hold incoming data
 boolean command_end = false;  // whether the string is complete
 
 void receivedCallback(char* message_data, int message_size) {
-    DEBUG_E4S("callback:[%d]%s\n", message_size, message_data);
+    DEBUG_E4S(String("callback:[") + message_size + "] " + message_data);
+    COMMAND_PORT.println(message_data);
 }
 
 void setupCommandPort(void) {

@@ -27,7 +27,7 @@ void loop() {
             "send:sensor-update \"A0\" %d \"A1\" %d \"A2\" %d \"A3\" %d \"A4\" %d \"A5\" %d \"D2\" %d ",
             analogRead(A0), analogRead(A1), analogRead(A2), analogRead(A3), analogRead(A4), analogRead(A5), digitalRead(2));
     COMMAND_PORT.println(message);
-    DEBUG_PRINT(String("DEBUG:") + message);
+//    DEBUG_PRINT(String("DEBUG:") + message);
   }
 }
 
