@@ -140,12 +140,12 @@ void setupScratchWeb(void) {
             content += String(scratch_ip[0]) + '.' + String(scratch_ip[1]) + '.' + String(scratch_ip[2]) + '.' + String(scratch_ip[3]);
             content += "</p>";
         } else {
-            content += "<p>";
-            content += "<a href='/add_scratch_ip'>Add New Scratch</a>";
-            content += " | ";
-            content += "<a href='/remove_scratch_ip'>Remove Registered Scratch</a>";
-            content += "</p>";
         }
+        content += "<p>";
+        content += "<a href='/add_scratch_ip'>Add New Scratch</a>";
+        content += " | ";
+        content += "<a href='/remove_scratch_ip'>Remove Registered Scratch</a>";
+        content += "</p>";
         content += "<p><a href='/'>Return to Top</a></p>";
         content += "<p>Registered: </p>";
         content += "<ul>";
@@ -211,16 +211,16 @@ void setupScratchWeb(void) {
                 content += String(scratch_clients[i].ip[0]) + '.' + String(scratch_clients[i].ip[1]) + '.' + String(scratch_clients[i].ip[2]) + '.' + String(scratch_clients[i].ip[3]);
                 content += "</label>";
                 content += "<input name='scratch_ip_0' maxlength=3 value='";
-                content += String(client_ip[0]);
+                content += String(scratch_clients[i].ip[0]);
                 content += "' type='hidden'>";
                 content += "<input name='scratch_ip_1' maxlength=3 value='";
-                content += String(client_ip[1]);
+                content += String(scratch_clients[i].ip[1]);
                 content += "' type='hidden'>";
                 content += "<input name='scratch_ip_2' maxlength=3 value='";
-                content += String(client_ip[2]);
+                content += String(scratch_clients[i].ip[2]);
                 content += "' type='hidden'>";
                 content += "<input name='scratch_ip_3' maxlength=3 value='";
-                content += String(client_ip[3]);
+                content += String(scratch_clients[i].ip[3]);
                 content += "' type='hidden'>";
                 content += " <input type='submit' value='remove'>";
                 content += "</form><br/>";
