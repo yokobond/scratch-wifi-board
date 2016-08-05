@@ -51,6 +51,7 @@ void setupConnection(void) {
   pinMode(3, OUTPUT);
 }
 
+
 void readCommand(void) {
   while (COMMAND_PORT.available()) {
     char in_char = (char)COMMAND_PORT.read();
